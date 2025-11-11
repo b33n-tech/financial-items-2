@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Items Budgeting App - Carrés</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body { font-family: Arial, sans-serif; background: #f0f2f5; margin: 10px; text-align: center; }
+h1 { font-size: 1.8em; margin-bottom: 15px; }
+.category { margin: 20px 0; }
+.category-name { font-weight: bold; margin-bottom: 5px; font-size: 1.2em; }
+.counter { margin-bottom: 10px; font-size: 1em; color: #333; }
+.tokens { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; }
+.token { width: 50px; height: 50px; border-radius: 8px; background: #007bff; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; cursor: pointer; transition: transform 0.1s, opacity 0.3s; }
+.token.used { background: #aaa; opacity: 0.5; cursor: default; }
+button#resetBtn { margin-top: 20px; font-size: 1.2em; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; background: #dc3545; color: white; }
+.history { margin-top: 20px; max-height: 200px; overflow-y: auto; background: #fff; padding: 10px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);}
+@media (max-width: 480px) {
+    .token { width: 60px; height: 60px; font-size: 1.2em; }
+}
+</style>
+</head>
+<body>
+
+<h1>Items Budgeting App</h1>
+
+<div id="categories"></div>
+
+<button id="resetBtn">Réinitialiser tout</button>
+
+<div class="history" id="historyContainer">
+<h2>Historique</h2>
+<ul id="historyList"></ul>
+</div>
+
+<script>
+// Données initiales
+let defaultCategories = [
+    { name: "Burgers", total: 3, remaining: 3, color: "#007bff", unitLabel: "burger" },
+    { name: "Equipement", total: 6, remaining: 6, color: "#dc3545", unitLabel: "equip" },
+    { name: "Bonbons", total: 12, remaining: 12, color: "#ffc107", unitLabel: "bonbon" }
+];
+
+let categories = JSON.parse(localStorage.getItem('categories')) || defaultCategories;
+let history = JSON.parse(localStorage.getItem('history')) || [];
+
+function saveState() {
+    localStorage.setItem('categories', JSON.stringify(categories));
+    localStorage.setItem('history', JSON.stringify(history));
+}
+
+// Rendu catégories
+function renderCategories() {
+    const container = document.getElementById('categories');
+    container.innerHTML = '';
+    categories.forEach((cat, i) => {
+        const div = document.createElement('div');
+        div.className = 'category';
+        div.innerHTML = `<div class="category-name">${cat.name}</div>
+                         <div class="counter">Restant: ${cat.remaining}/${cat.total}</div>`;
+        
+        const tokenContainer = document.createElement('div');
+        tokenContainer.className = 'tokens';
+        
+        for(let j=0;j<cat.total;j++){
+            const token = document.createElement('div');
+            token.className = 'token';
+            token.style.background = j < (cat.total - cat.remaining) ? '#aaa' : cat.color;
+            if(j >= (cat.total - cat.remaining)){
+                token.onclick = () => { consumeToken(i, j); };
+            } else {
+                token.classList.add('used');
+            }
+            tokenContainer.appendChild(token);
+        }
+        
+        div.appendChild(tokenContainer);
+        container.appendChild(div);
+    });
+}
+
+// Consommer un token
+function consumeToken(catIndex, tokenIndex){
+    const cat = categories[catIndex];
+    if(cat.remaining > 0){
+        cat.remaining--;
+        const now = new Date().toLocaleString();
+        history.unshift({ category: cat.name, qty: 1, timestamp: now });
+        saveState();
+        renderCategories();
+        renderHistory();
+    }
+}
+
+// Historique
+function renderHistory(){
+    const ul = document.getElementById('historyList');
+    ul.innerHTML = '';
+    history.forEach(h => {
+        const li = document.createElement('li');
+        li.textContent = `${h.timestamp}: ${h.qty} ${h.category}`;
+        ul.appendChild(li);
+    });
+}
+
+// Reset
+document.getElementById('resetBtn').onclick = () => {
+    if(confirm("Confirmez-vous la réinitialisation de tout ?")){
+        categories = defaultCategories.map(c => ({ ...c, remaining: c.total }));
+        history = [];
+        saveState();
+        renderCategories();
+        renderHistory();
+    }
+}
+
+// Initial render
+renderCategories();
+renderHistory();
+</script>
+
+</body>
+</html>
